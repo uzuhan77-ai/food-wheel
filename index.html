@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>今天吃什么？</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #fafaf8; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem 1rem; }
+  h1 { font-size: 24px; font-weight: 600; color: #1a1a18; margin-bottom: 0.3rem; }
+  .subtitle { font-size: 14px; color: #888; margin-bottom: 1.5rem; }
+  .wheel-wrap { position: relative; display: inline-block; }
+  .pointer { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 13px solid transparent; border-right: 13px solid transparent; border-top: 26px solid #E24B4A; filter: drop-shadow(0 2px 4px rgba(226,75,74,0.3)); z-index: 10; }
+  canvas { display: block; border-radius: 50%; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
+  .result-box { margin-top: 1.5rem; text-align: center; min-height: 60px; }
+  .result-dish { font-size: 26px; font-weight: 600; color: #1a1a18; }
+  .result-sub { font-size: 14px; color: #888; margin-top: 4px; }
+  .spin-btn { margin-top: 1.2rem; font-size: 16px; padding: 12px 40px; border-radius: 10px; border: 1.5px solid #d0cec8; background: #fff; color: #1a1a18; cursor: pointer; transition: background 0.15s, transform 0.1s; font-family: inherit; }
+  .spin-btn:hover { background: #f0efe8; }
+  .spin-btn:active { transform: scale(0.97); }
+  .spin-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+</head>
+<body>
+  <h1>🍽 今天吃什么？</h1>
+  <p class="subtitle">转动转盘，让命运决定！</p>
+  <div class="wheel-wrap">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="360" height="360"></canvas>
+  </div>
+  <div class="result-box">
+    <div class="result-dish" id="result-dish">点击按钮开始抽取</div>
+    <div class="result-sub" id="result-sub"></div>
+  </div>
+  <button class="spin-btn" id="spin-btn" onclick="spinWheel()">🎲 开始转动</button>
+
+<script>
+const dishes = ["辣椒炒肉","红烧鱼","炒青菜","葱煎蛋","西红柿炒鸡蛋","辣椒炒鸡蛋","可乐鸡翅","豆角米炒肉末","酸辣土豆丝","擂辣椒皮蛋","油焖大虾","香菇炒青菜","炒腊肉","炒芹菜","油淋辣椒","清炒莴笋头","清炒丝瓜","白菜炖粉条"];
+const fills   = ["#EEEDFE","#E1F5EE","#FAECE7","#FBEAF0","#E6F1FB","#EAF3DE","#FAEEDA","#FCEBEB","#F1EFE8","#E1F5EE","#FAECE7","#EEEDFE","#E6F1FB","#EAF3DE","#FAEEDA","#FCEBEB","#FBEAF0","#E1F5EE"];
+const strokes = ["#534AB7","#0F6E56","#993C1D","#993556","#185FA5","#3B6D11","#854F0B","#A32D2D","#5F5E5A","#0F6E56","#993C1D","#534AB7","#185FA5","#3B6D11","#854F0B","#A32D2D","#993556","#0F6E56"];
+const texts   = ["#3C3489","#085041","#712B13","#72243E","#0C447C","#27500A","#633806","#791F1F","#444441","#085041","#712B13","#3C3489","#0C447C","#27500A","#633806","#791F1F","#72243E","#085041"];
+
+const n = dishes.length;
+const arc = (2 * Math.PI) / n;
+const canvas = document.getElementById('wheel');
+const ctx = canvas.getContext('2d');
+const cx = 180, cy = 180, r = 172;
+let currentAngle = 0, spinning = false;
+
+function drawWheel(angle) {
+  ctx.clearRect(0, 0, 360, 360);
+  for (let i = 0; i < n; i++) {
+    const start = angle + i * arc;
+    const end = start + arc;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = fills[i];
+    ctx.fill();
+    ctx.strokeStyle = strokes[i];
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + arc / 2);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = texts[i];
+    ctx.font = '500 13px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.fillText(dishes[i], r - 10, 5);
+    ctx.restore();
+  }
+  ctx.beginPath();
+  ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = '#ddd';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+drawWheel(currentAngle);
+
+function spinWheel() {
+  if (spinning) return;
+  spinning = true;
+  document.getElementById('spin-btn').disabled = true;
+  document.getElementById('result-dish').textContent = '转动中...';
+  document.getElementById('result-sub').textContent = '';
+  const extraSpins = (6 + Math.floor(Math.random() * 5)) * 2 * Math.PI;
+  const randomStop = Math.random() * 2 * Math.PI;
+  const totalRotation = extraSpins + randomStop;
+  const duration = 4000;
+  const startTime = performance.now();
+  const startAngle = currentAngle;
+
+  function ease(t) { return 1 - Math.pow(1 - t, 3); }
+
+  function animate(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    currentAngle = startAngle + totalRotation * ease(t);
+    drawWheel(currentAngle);
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      spinning = false;
+      document.getElementById('spin-btn').disabled = false;
+      // 指针在顶部，对应 -Math.PI/2（270°方向）
+      const pointerAngle = -Math.PI / 2;
+      const normalized = ((pointerAngle - currentAngle) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI);
+      const idx = Math.floor(normalized / arc) % n;
+      document.getElementById('result-dish').textContent = '🍽 ' + dishes[idx];
+      document.getElementById('result-sub').textContent = '今天就吃这个！';
+    }
+  }
+  requestAnimationFrame(animate);
+}
+</script>
+</body>
+</html>
